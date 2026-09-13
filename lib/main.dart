@@ -23,45 +23,39 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF7E8),
+
+      appBar: AppBar(backgroundColor: const Color(0xFFFFF7E8), elevation: 0),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 90),
+              const SizedBox(height: 60),
 
-              // صورة رفيق
               Center(
-                child: Image.asset(
-                  'assets/rafiq.png',
-                  width: 180,
-                  height: 180,
-                  fit: BoxFit.contain,
-                ),
+                child: Image.asset('assets/rafiq.png', width: 180, height: 180),
               ),
 
               const SizedBox(height: 20),
 
-              // مرحباً بك
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
+                  horizontal: 18,
                   vertical: 7,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE1F1DF),
+                  color: const Color(0xFFE3F2DF),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Text(
                   'مرحباً بك',
-                  style: TextStyle(fontSize: 15, color: Color(0xFF4D8B4A)),
+                  style: TextStyle(fontSize: 16, color: Color(0xFF4D8B4A)),
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 14),
 
-              // العنوان
               const Text(
                 'رفيقك الذكي للدراسة',
                 textAlign: TextAlign.center,
@@ -72,9 +66,8 @@ class HomePage extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 35),
+              const SizedBox(height: 25),
 
-              // النبذة
               const Text(
                 'حوّل مهامك الدراسية إلى تحديات تفتخر بإنجازها',
                 textAlign: TextAlign.center,
@@ -85,9 +78,8 @@ class HomePage extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 35),
+              const SizedBox(height: 40),
 
-              // الزر
               Center(
                 child: SizedBox(
                   width: 160,
