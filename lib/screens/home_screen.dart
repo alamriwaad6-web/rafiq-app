@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'focus_screen.dart';
+import 'add_task_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String userName;
@@ -10,6 +11,16 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddTaskScreen()),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('إضافة مهمة'),
+      ),
       backgroundColor: const Color(0xFFFFF9ED),
       appBar: AppBar(
         backgroundColor: const Color(0xFFFFF9ED),
