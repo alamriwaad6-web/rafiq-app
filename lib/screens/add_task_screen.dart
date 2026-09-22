@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/task.dart';
 
+import 'package:shared_preferences/shared_preferences.dart';
+
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({super.key});
 
@@ -15,7 +17,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   final _descriptionController = TextEditingController();
 
   String? _category;
-
+  @override
   @override
   void dispose() {
     _titleController.dispose();
@@ -32,14 +34,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       category: _category,
     );
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('تمت إضافة المهمة: ${task.title}')));
-
-    _formKey.currentState!.reset();
-    _titleController.clear();
-    _descriptionController.clear();
-    setState(() => _category = null);
+    Navigator.pop(context, task);
   }
 
   @override
@@ -84,6 +79,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
+                  key: ValueKey(_category),
+                  initialValue: _category,
                   decoration: const InputDecoration(
                     labelText: 'تصنيف المهمة',
                     border: OutlineInputBorder(),
@@ -93,7 +90,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     DropdownMenuItem(value: 'واجب', child: Text('واجب')),
                     DropdownMenuItem(value: 'اختبار', child: Text('اختبار')),
                   ],
-                  onChanged: (value) => setState(() => _category = value),
+                  onChanged: (value) {
+                    setState(() => _category = value);
+                  },
                 ),
                 const SizedBox(height: 24),
                 ElevatedButton(
