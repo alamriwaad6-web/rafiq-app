@@ -10,4 +10,22 @@ class Task {
     this.category,
     this.isCompleted = false,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'description': description,
+      'category': category,
+      'isCompleted': isCompleted,
+    };
+  }
+
+  factory Task.fromJson(Map<String, dynamic> json) {
+    return Task(
+      title: json['title'] as String,
+      description: json['description'] as String,
+      category: json['category'] as String?,
+      isCompleted: json['isCompleted'] as bool? ?? false,
+    );
+  }
 }
