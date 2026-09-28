@@ -6,6 +6,10 @@ import '../cubit/task_state.dart';
 import '../models/task.dart';
 import 'add_task_screen.dart';
 import 'focus_screen.dart';
+import '../cubit/quote_cubit.dart';
+import '../repositories/quote_repository.dart';
+
+import '../cubit/quote_state.dart';
 
 class HomeScreen extends StatelessWidget {
   final String userName;
@@ -14,8 +18,13 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => TaskCubit()..loadTasks(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<TaskCubit>(create: (_) => TaskCubit()..loadTasks()),
+        BlocProvider<QuoteCubit>(
+          create: (_) => QuoteCubit(QuoteRepository())..loadQuote(),
+        ),
+      ],
       child: _HomeContent(userName: userName),
     );
   }
@@ -134,6 +143,55 @@ class _HomeContent extends StatelessWidget {
           'جاهزة لبدء جلسة مذاكرة جديدة؟',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 16, color: Color(0xFF77736B)),
+        ),
+        const SizedBox(height: 18),
+        BlocBuilder<QuoteCubit, QuoteState>(
+          builder: (context, state) {
+            if (state is QuoteInitial || state is QuoteLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (state is QuoteError) {
+              return Column(
+                children: [
+                  Text(state.message, textAlign: TextAlign.center),
+                  TextButton(
+                    onPressed: () => context.read<QuoteCubit>().loadQuote(),
+                    child: const Text('إعادة المحاولة'),
+                  ),
+                ],
+              );
+            }
+
+            final quote = (state as QuoteSuccess).quote;
+
+            return Card(
+              color: const Color(0xFFFFF2B3),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    const Text(
+                      'عبارة اليوم',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2F6538),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      quote.text,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('— ${quote.author}'),
+                  ],
+                ),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 35),
         SizedBox(
