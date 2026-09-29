@@ -1,30 +1,37 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:first_app1/models/task.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:first_app1/main.dart';
-
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('Task', () {
+    test('keeps challenge duration and points when serialized', () {
+      final task = Task(
+        title: 'مراجعة الفصل',
+        description: 'الفصل الأول',
+        category: 'مذاكرة',
+        durationMinutes: 45,
+        points: 35,
+      );
+      final restored = Task.fromJson(task.toJson());
+      expect(restored.title, task.title);
+      expect(restored.durationMinutes, 45);
+      expect(restored.points, 35);
+    });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('loads old saved tasks with safe defaults', () {
+      final task = Task.fromJson({
+        'title': 'مهمة قديمة',
+        'description': '',
+        'isCompleted': false,
+      });
+      expect(task.durationMinutes, 25);
+      expect(task.points, 20);
+    });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    test('copyWith preserves data and changes completion', () {
+      final task = Task(title: 'تحدٍ', description: '');
+      final completed = task.copyWith(isCompleted: true);
+      expect(completed.isCompleted, isTrue);
+      expect(completed.title, task.title);
+    });
   });
 }

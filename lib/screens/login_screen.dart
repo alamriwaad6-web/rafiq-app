@@ -1,188 +1,155 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'register_screen.dart';
+import '../utils/auth_validators.dart';
+import '../widgets/auth_shell.dart';
 import 'home_screen.dart';
+import 'register_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF9ED),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _loading = false;
+  bool _hidePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    if (!_formKey.currentState!.validate()) return;
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    setState(() => _loading = true);
+    try {
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              HomeScreen(userName: credential.user?.displayName ?? 'صديق رفيق'),
+        ),
+        (_) => false,
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      final message = switch (error.code) {
+        'invalid-email' => 'صيغة البريد الإلكتروني غير صحيحة',
+        'invalid-credential' ||
+        'wrong-password' ||
+        'user-not-found' => 'البريد الإلكتروني أو كلمة المرور غير صحيحة',
+        _ => 'تعذر تسجيل الدخول. حاولي مرة أخرى',
+      };
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر الاتصال. حاولي مرة أخرى')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AuthShell(
+    title: 'مرحبًا بعودتك',
+    subtitle: 'سجّل دخولك لتكمل من حيث توقفت.',
+    child: Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const FieldLabel('البريد الإلكتروني'),
+          TextFormField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            textDirection: TextDirection.ltr,
+            autofillHints: const [AutofillHints.email],
+            validator: validateEmail,
+            decoration: const InputDecoration(
+              hintText: 'name@example.com',
+              prefixIcon: Icon(Icons.alternate_email_rounded),
+            ),
+          ),
+          const SizedBox(height: 18),
+          const FieldLabel('كلمة المرور'),
+          TextFormField(
+            controller: _passwordController,
+            obscureText: _hidePassword,
+            textDirection: TextDirection.ltr,
+            autofillHints: const [AutofillHints.password],
+            validator: validateLoginPassword,
+            onFieldSubmitted: (_) {
+              if (!_loading) _login();
+            },
+            decoration: InputDecoration(
+              hintText: '••••••••',
+              prefixIcon: const Icon(Icons.lock_outline_rounded),
+              suffixIcon: IconButton(
+                tooltip: _hidePassword
+                    ? 'إظهار كلمة المرور'
+                    : 'إخفاء كلمة المرور',
+                onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                icon: Icon(
+                  _hidePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 26),
+          ElevatedButton(
+            onPressed: _loading ? null : _login,
+            child: _loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  )
+                : const Text('تسجيل الدخول'),
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const SizedBox(height: 65),
-
-              // شعار التطبيق
-              Container(
-                width: 85,
-                height: 85,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE6F0C9),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.smart_toy_rounded,
-                  size: 50,
-                  color: Color(0xFF4B914E),
-                ),
+              Text(
+                'ليس لديك حساب؟',
+                style: Theme.of(context).textTheme.bodyMedium,
               ),
-
-              const SizedBox(height: 22),
-
-              const Text(
-                'أهلاً بك في رفيق',
-                style: TextStyle(
-                  fontSize: 27,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF222222),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              const Text(
-                'سجّل دخولك وابدأ رحلتك',
-                style: TextStyle(fontSize: 15, color: Color(0xFF8C897F)),
-              ),
-
-              const SizedBox(height: 40),
-
-              // البريد الإلكتروني
-              const Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'البريد الإلكتروني',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              TextField(
-                keyboardType: TextInputType.emailAddress,
-                textDirection: TextDirection.ltr,
-                decoration: InputDecoration(
-                  hintText: 'example@email.com',
-                  hintStyle: const TextStyle(color: Color(0xFFB5B1A8)),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE7E1D4)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE7E1D4)),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // كلمة المرور
-              const Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  'كلمة المرور',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              TextField(
-                obscureText: true,
-                textDirection: TextDirection.ltr,
-                decoration: InputDecoration(
-                  hintText: '••••••••',
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 16,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE7E1D4)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFE7E1D4)),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 26),
-
-              // زر تسجيل الدخول
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HomeScreen(userName: 'وعد'),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4B914E),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'تسجيل الدخول',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              // الانتقال إلى شاشة إنشاء الحساب
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
+              TextButton(
+                onPressed: _loading
+                    ? null
+                    : () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const RegisterScreen(),
+                          builder: (_) => const RegisterScreen(),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      'إنشاء حساب',
-                      style: TextStyle(
-                        color: Color(0xFF4B914E),
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                  ),
-                  const Text(
-                    'ليس لديك حساب؟',
-                    style: TextStyle(color: Color(0xFF77736B)),
-                  ),
-                ],
+                child: const Text('إنشاء حساب'),
               ),
             ],
           ),
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 }

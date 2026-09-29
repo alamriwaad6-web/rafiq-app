@@ -1,133 +1,172 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../utils/auth_validators.dart';
+import '../widgets/auth_shell.dart';
 import 'home_screen.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF9ED),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF9ED),
-        elevation: 0,
-        foregroundColor: const Color(0xFF222222),
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 28),
-          child: Column(
-            children: [
-              const Text(
-                'إنشاء حساب جديد',
-                style: TextStyle(fontSize: 27, fontWeight: FontWeight.bold),
-              ),
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
 
-              const SizedBox(height: 8),
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmController = TextEditingController();
+  bool _loading = false;
+  bool _hidePassword = true;
 
-              const Text(
-                'أنشئ حسابك وابدأ رحلتك مع رفيق',
-                style: TextStyle(fontSize: 15, color: Color(0xFF8C897F)),
-              ),
-
-              const SizedBox(height: 35),
-
-              _buildField(label: 'الاسم', hint: 'اكتب اسمك'),
-
-              const SizedBox(height: 18),
-
-              _buildField(
-                label: 'البريد الإلكتروني',
-                hint: 'example@email.com',
-              ),
-
-              const SizedBox(height: 18),
-
-              _buildField(
-                label: 'كلمة المرور',
-                hint: '••••••••',
-                password: true,
-              ),
-
-              const SizedBox(height: 18),
-
-              _buildField(
-                label: 'تأكيد كلمة المرور',
-                hint: '••••••••',
-                password: true,
-              ),
-
-              const SizedBox(height: 28),
-
-              SizedBox(
-                width: double.infinity,
-                height: 54,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const HomeScreen(userName: 'وعد'),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4B914E),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'إنشاء الحساب',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
+    super.dispose();
   }
 
-  Widget _buildField({
-    required String label,
-    required String hint,
+  Future<void> _register() async {
+    if (!_formKey.currentState!.validate()) return;
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    setState(() => _loading = true);
+    try {
+      final credential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+      await credential.user?.updateDisplayName(name);
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => HomeScreen(userName: name)),
+        (_) => false,
+      );
+    } on FirebaseAuthException catch (error) {
+      if (!mounted) return;
+      final message = switch (error.code) {
+        'invalid-email' => 'صيغة البريد الإلكتروني غير صحيحة',
+        'weak-password' => 'كلمة المرور ضعيفة؛ اختاري كلمة أقوى',
+        'email-already-in-use' => 'هذا البريد مسجّل مسبقًا',
+        _ => 'تعذر إنشاء الحساب. حاولي مرة أخرى',
+      };
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر الاتصال. حاولي مرة أخرى')),
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AuthShell(
+    title: 'ابدأ رحلتك مع رفيق',
+    subtitle: 'أنشئ حسابًا لتحتفظ بتحدياتك وتقدّمك.',
+    child: Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _field(
+            'الاسم',
+            'اكتب اسمك',
+            _nameController,
+            Icons.person_outline_rounded,
+            validator: validateName,
+          ),
+          const SizedBox(height: 18),
+          _field(
+            'البريد الإلكتروني',
+            'name@example.com',
+            _emailController,
+            Icons.alternate_email_rounded,
+            keyboardType: TextInputType.emailAddress,
+            ltr: true,
+            validator: validateEmail,
+          ),
+          const SizedBox(height: 18),
+          _field(
+            'كلمة المرور',
+            '••••••••',
+            _passwordController,
+            Icons.lock_outline_rounded,
+            password: true,
+            ltr: true,
+            validator: validateNewPassword,
+          ),
+          const SizedBox(height: 18),
+          _field(
+            'تأكيد كلمة المرور',
+            '••••••••',
+            _confirmController,
+            Icons.verified_user_outlined,
+            password: true,
+            ltr: true,
+            validator: (value) =>
+                validatePasswordConfirmation(value, _passwordController.text),
+          ),
+          const SizedBox(height: 28),
+          ElevatedButton(
+            onPressed: _loading ? null : _register,
+            child: _loading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  )
+                : const Text('إنشاء الحساب'),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _field(
+    String label,
+    String hint,
+    TextEditingController controller,
+    IconData icon, {
     bool password = false,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+    bool ltr = false,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      FieldLabel(label),
+      TextFormField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: password && _hidePassword,
+        textDirection: ltr ? TextDirection.ltr : TextDirection.rtl,
+        validator: validator,
+        decoration: InputDecoration(
+          hintText: hint,
+          prefixIcon: Icon(icon),
+          suffixIcon: password
+              ? IconButton(
+                  tooltip: _hidePassword
+                      ? 'إظهار كلمة المرور'
+                      : 'إخفاء كلمة المرور',
+                  onPressed: () =>
+                      setState(() => _hidePassword = !_hidePassword),
+                  icon: Icon(
+                    _hidePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                  ),
+                )
+              : null,
         ),
-
-        const SizedBox(height: 8),
-
-        TextField(
-          obscureText: password,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 16,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE7E1D4)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFE7E1D4)),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
 }

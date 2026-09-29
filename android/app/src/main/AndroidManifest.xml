@@ -1,8 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="first_app1"
+        android:label="رفيق"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Some Android emulators render a black surface with Impeller/OpenGLES. -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

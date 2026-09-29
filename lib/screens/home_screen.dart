@@ -4,253 +4,169 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../cubit/task_cubit.dart';
 import '../cubit/task_state.dart';
 import '../models/task.dart';
+import '../widgets/rafiq_ui.dart';
+import '../widgets/challenge_dashboard.dart';
 import 'add_task_screen.dart';
 import 'focus_screen.dart';
-import '../cubit/quote_cubit.dart';
-import '../repositories/quote_repository.dart';
-
-import '../cubit/quote_state.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String userName;
-
   const HomeScreen({super.key, required this.userName});
-
   @override
-  Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<TaskCubit>(create: (_) => TaskCubit()..loadTasks()),
-        BlocProvider<QuoteCubit>(
-          create: (_) => QuoteCubit(QuoteRepository())..loadQuote(),
-        ),
-      ],
-      child: _HomeContent(userName: userName),
-    );
-  }
+  Widget build(BuildContext context) => BlocProvider(
+    create: (_) => TaskCubit()..loadTasks(),
+    child: _HomeContent(userName: userName),
+  );
 }
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
   final String userName;
-
   const _HomeContent({required this.userName});
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
 
-  Future<void> _openAddTaskScreen(BuildContext context) async {
+class _HomeContentState extends State<_HomeContent> {
+  int _tab = 0;
+  Future<void> _add() async {
     final task = await Navigator.push<Task>(
       context,
-      MaterialPageRoute(builder: (context) => const AddTaskScreen()),
+      MaterialPageRoute(builder: (_) => const AddTaskScreen()),
     );
-
-    if (!context.mounted || task == null) return;
-
-    await context.read<TaskCubit>().addTask(task);
+    if (mounted && task != null) await context.read<TaskCubit>().addTask(task);
   }
 
-  void _openFocusScreen(BuildContext context) {
-    Navigator.push(
+  Future<void> _focus(Task task, int index) async {
+    final done = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (context) => const FocusScreen()),
+      MaterialPageRoute(builder: (_) => FocusScreen(task: task)),
     );
+    if (mounted && done == true && !task.isCompleted) {
+      await context.read<TaskCubit>().toggleTask(index);
+    }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF9ED),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFFFF9ED),
-        automaticallyImplyLeading: false,
-        title: Align(
-          alignment: Alignment.centerRight,
-          child: Text('مرحبًا $userName'),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF2F6538),
-        foregroundColor: const Color(0xFFFFF2B3),
-        onPressed: () => _openAddTaskScreen(context),
-        icon: const Icon(Icons.add),
-        label: const Text('إضافة مهمة'),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0,
-        backgroundColor: const Color(0xFFFFF9ED),
-        selectedItemColor: const Color(0xFF2F6338),
-        unselectedItemColor: const Color(0xFF77736B),
-        onTap: (index) {
-          if (index == 1) {
-            _openAddTaskScreen(context);
-          } else if (index == 2) {
-            _openFocusScreen(context);
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'الرئيسية',
+  Future<void> _delete(int index, String title) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('حذف التحدي'),
+        content: Text('هل تريد حذف «$title»؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('إلغاء'),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: 'إضافة مهمة',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.timer_outlined),
-            label: 'التركيز',
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'حذف',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),
-      body: BlocListener<TaskCubit, TaskState>(
+    );
+    if (mounted && ok == true) {
+      await context.read<TaskCubit>().deleteTask(index);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      automaticallyImplyLeading: false,
+      toolbarHeight: 72,
+      title: _tab == 0 ? const RafiqMark() : const Text('ملفي'),
+      actions: [
+        if (_tab == 0)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 16),
+            child: IconButton.filledTonal(
+              tooltip: 'ملفي',
+              onPressed: () => setState(() => _tab = 1),
+              icon: const Icon(Icons.person_outline_rounded),
+            ),
+          ),
+      ],
+    ),
+    bottomNavigationBar: NavigationBar(
+      selectedIndex: _tab,
+      onDestinationSelected: (value) => setState(() => _tab = value),
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.space_dashboard_outlined),
+          selectedIcon: Icon(Icons.space_dashboard_rounded),
+          label: 'اليوم',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.person_outline_rounded),
+          selectedIcon: Icon(Icons.person_rounded),
+          label: 'ملفي',
+        ),
+      ],
+    ),
+    floatingActionButton: _tab == 0
+        ? FloatingActionButton.extended(
+            onPressed: _add,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('تحدٍ جديد'),
+          )
+        : null,
+    body: SafeArea(
+      top: false,
+      child: BlocConsumer<TaskCubit, TaskState>(
         listener: (context, state) {
           if (state is TaskError) {
             ScaffoldMessenger.of(context)
                 .showSnackBar(SnackBar(content: Text(state.message)));
           }
         },
-        child: BlocBuilder<TaskCubit, TaskState>(
-          builder: (context, state) {
-            if (state is TaskInitial || state is TaskLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (state is TaskError) {
-              return Center(child: Text(state.message));
-            }
-
-            final tasks = (state as TaskSuccess).tasks;
-            return _buildTaskContent(context, tasks);
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTaskContent(BuildContext context, List<Task> tasks) {
-    return ListView(
-      padding: const EdgeInsets.all(28),
-      children: [
-        Text(
-          'أهلًا بك يا $userName في رفيق',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF4B914E),
-          ),
-        ),
-        const SizedBox(height: 18),
-        const Text(
-          'جاهزة لبدء جلسة مذاكرة جديدة؟',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, color: Color(0xFF77736B)),
-        ),
-        const SizedBox(height: 18),
-        BlocBuilder<QuoteCubit, QuoteState>(
-          builder: (context, state) {
-            if (state is QuoteInitial || state is QuoteLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (state is QuoteError) {
-              return Column(
+        builder: (context, state) {
+          if (state is TaskInitial || state is TaskLoading) {
+            return const Center(
+              child: CircularProgressIndicator(
+                semanticsLabel: 'تحميل التحديات',
+              ),
+            );
+          }
+          if (state is TaskError) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(state.message, textAlign: TextAlign.center),
-                  TextButton(
-                    onPressed: () => context.read<QuoteCubit>().loadQuote(),
-                    child: const Text('إعادة المحاولة'),
+                  Text(state.message),
+                  TextButton.icon(
+                    onPressed: () => context.read<TaskCubit>().loadTasks(),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('إعادة المحاولة'),
                   ),
                 ],
-              );
-            }
-
-            final quote = (state as QuoteSuccess).quote;
-
-            return Card(
-              color: const Color(0xFFFFF2B3),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    const Text(
-                      'عبارة اليوم',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2F6538),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      quote.text,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    Text('— ${quote.author}'),
-                  ],
-                ),
               ),
             );
-          },
-        ),
-        const SizedBox(height: 35),
-        SizedBox(
-          height: 54,
-          child: ElevatedButton.icon(
-            onPressed: () => _openFocusScreen(context),
-            icon: const Icon(Icons.timer_outlined),
-            label: const Text('ابدأ وضع التركيز'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4B914E),
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ),
-        const SizedBox(height: 35),
-        const Text(
-          'مهام اليوم',
-          textAlign: TextAlign.right,
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        if (tasks.isEmpty)
-          const Text('ما عندك مهام مضافة بعد.')
-        else
-          ...List.generate(tasks.length, (index) {
-            final task = tasks[index];
-
-            return Directionality(
-              textDirection: TextDirection.rtl,
-              child: Card(
-                color: const Color(0xFFFFF2B3),
-                child: CheckboxListTile(
-                  controlAffinity: ListTileControlAffinity.leading,
-                  activeColor: const Color(0xFFD6A500),
-                  value: task.isCompleted,
-                  onChanged: (_) {
-                    context.read<TaskCubit>().toggleTask(index);
-                  },
-                  title: Text(
-                    task.title,
-                    style: TextStyle(
-                      decoration: task.isCompleted
-                          ? TextDecoration.lineThrough
-                          : null,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (task.description.isNotEmpty) Text(task.description),
-                      if (task.category != null) Text(task.category!),
-                    ],
-                  ),
-                ),
-              ),
+          }
+          final tasks = (state as TaskSuccess).tasks;
+          final points = tasks
+              .where((task) => task.isCompleted)
+              .fold<int>(0, (sum, task) => sum + task.points);
+          if (_tab == 1) {
+            return SettingsScreen(
+              taskCount: tasks.length,
+              completedCount: tasks.where((t) => t.isCompleted).length,
+              points: points,
             );
-          }),
-        const SizedBox(height: 80),
-      ],
-    );
-  }
+          }
+          return ChallengeDashboard(
+            userName: widget.userName,
+            tasks: tasks,
+            onAdd: _add,
+            onToggle: (i) => context.read<TaskCubit>().toggleTask(i),
+            onDelete: (i) => _delete(i, tasks[i].title),
+            onFocus: (i) => _focus(tasks[i], i),
+          );
+        },
+      ),
+    ),
+  );
 }
