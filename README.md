@@ -32,11 +32,13 @@
 
 ## طريقة التشغيل
 
-النسخة الحالية مجهّزة للتشغيل على **Android**. إعدادات Firebase في `lib/firebase_options.dart` غير مهيأة للويب وiOS والمنصات المكتبية.
+النسخة الحالية مجهّزة للتشغيل على **Android**. إعدادات Firebase غير مهيأة للويب وiOS والمنصات المكتبية. ملفّا `lib/firebase_options.dart` و`android/app/google-services.json` محليان ولا يُرفعان إلى GitHub؛ يجب إنشاء إعداد Firebase خاص بك قبل تشغيل نسخة جديدة من المستودع.
 
 1. ثبّت Flutter وAndroid SDK، وشغّل محاكي Android أو صِل جهازًا.
-2. تأكد من وجود إعداد Firebase الخاص بالتطبيق في `android/app/google-services.json` ومطابقته لمعرّف الحزمة في `android/app/build.gradle.kts`.
-3. من مجلد المشروع شغّل:
+2. أنشئ مشروعًا في Firebase، وسجّل تطبيق Android بمعرّف الحزمة الموجود في `android/app/build.gradle.kts`، وفعّل **Authentication → Email/Password**.
+3. نزّل `google-services.json` من إعدادات تطبيق Android في Firebase وضعه في `android/app/`.
+4. ثبّت FlutterFire CLI وشغّل `flutterfire configure --platforms=android` من مجلد المشروع مع اختيار مشروع Firebase نفسه، لتوليد `lib/firebase_options.dart`.
+5. شغّل:
 
 ```bash
 flutter pub get
